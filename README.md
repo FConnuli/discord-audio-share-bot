@@ -1,24 +1,26 @@
 # discord-mic-bot
 
-Discord bot to connect to your microphone―and you can have stereo sound
-
-![Screenshot](screenshot.png)
+Discord bot to connect to any audio source on your linux system.
 
 ## Description
 
-Discord transmits only mono sound to voice channel, which makes it a bad
-experience if you want to sing karaoke or play an instrument in a voice party.
-However, bot can transmit stereo sound to voice channel. Thus, you can connect
-to your party channel as a bot. (You will need an admin to approve.)
+Currently the discord feature that allows screen share audio
+does not work on the linux version. This script creates
+a jack audio output that plays through a discord bot.
+Audio can be routed into this output through a patchbay
+like qpwgraph.
 
-Hey Discord developers, listen to these feedbacks! Shame on you!
-- [2018-12-28: Stereo audio](https://support.discord.com/hc/en-us/community/posts/360036186992-Stereo-audio)
-- [2019-07-28: Allow users to have stereo mic output as an option](https://support.discord.com/hc/en-us/community/posts/360048093091-Allow-users-to-have-stereo-mic-output-as-an-option-)
-- [2019-08-25: XLR stereo support](https://support.discord.com/hc/en-us/community/posts/360050181312-XLR-stereo-support)
-- [2019-09-09: Update your audio codec to allow for stereo mic setups](https://support.discord.com/hc/en-us/community/posts/360050373871-Update-your-audio-codec-to-allow-for-stereo-mic-setups)
-- [2020-01-14: Make stereo in Discord calls](https://support.discord.com/hc/en-us/community/posts/360056292532-Make-stereo-in-Discord-calls)
-- [2020-06-08: Stereo voice (for music DJ, music lesson, etc.)](https://support.discord.com/hc/en-us/community/posts/360068101212-Stereo-voice-for-music-DJ-music-lesson-etc-)
-- [2020-10-25: Stereo mic support](https://support.discord.com/hc/en-us/community/posts/360052098693-Stereo-mic-support)
+## Usage
+
+For Linux or macOS users, `discord-mic-bot` is the entry point.
+(use in .bashrc to have it start running on startup)
+
+running this will start the bot and create the jack output.
+Route the audio you desire to share through a patchbay.
+
+If the bot is invited to the server you are in. It will join
+and play audio whenever you start a screen share or turn on
+
 
 ## Installation
 
@@ -34,8 +36,6 @@ pip3 install -r requirements.txt --upgrade
 If fail to install
 [PyNaCl](https://github.com/pyca/pynacl/issues/637#issuecomment-710127304) or
 [NumPy](https://developercommunity.visualstudio.com/content/problem/1207405/fmod-after-an-update-to-windows-2004-is-causing-a.html)
-on Windows, you may need to temporarily downgrade to Python 3.8 until those
-problems are fixed.
 
 If on Linux, you also need to install libopus and libportaudio.
 
@@ -54,6 +54,17 @@ You need to obtain a bot token to log into Discord's server.
 4. Click on "Copy Token".
 
 5. Open the file named `token.txt` and paste your token inside that file.
+
+## Obtaining user ID
+
+The bot need your discord user ID to identify when you are starting streams.
+This is how to obtain and get this info to the bot:
+
+1. go to "User Settings">"Advanced" and enable "Developer Mode" here.
+
+2. right click your own account in a server list and select "Copy ID"
+
+3. Open `user.txt` and paste the ID.
 
 ## Inviting the bot to a Discord server
 
@@ -76,42 +87,6 @@ to help you invite your bot.
 4. Choose your destination server. Then click "Authorize".
 
 
-## Usage
-
-For Linux or macOS users, `discord-mic-bot` is the entry point.
-
-For Windows users, `discord-mic-bot.cmd` is the entry point.
-
-## Monitoring loudness
-
-The loudness meter is compatible to EBU R 128 / ITU-R BS.1770, showing the
-perceptible loudness for the last 0.4 seconds.
-
-```
--70 ================================= -32 ============= -14 ==== -5 === 0 LUFS
- |                Blue                 |      Green      | Yellow | Red |
--70 ================================= -32 ============= -14 ==== -5 === 0 LUFS
-```
-* The left end is calibrated to -70 LUFS.
-* Between blue and green is -32 LUFS.
-* Between green and yellow is -14 LUFS.
-* Between yellow and red is -5 LUFS.
-* The right end is calibrated to 0 LUFS.
-
-For music streaming, it is recommended to aim for -14 LUFS.
-
-But if you are playing the background music while people are speaking, try to
-lower down an extra 20 dB. **(i.e., aim for -34 LUFS.)**
-
-This widget is designed to only give you a rough intuition of your loudness. If
-you want to seriously measure your outgoing signal, try
-[Youlean Loudness Meter (shareware)](https://youlean.co/youlean-loudness-meter/)
-for Windows and macOS or
-[ebumeter](https://wiki.linuxaudio.org/apps/all/ebumeter) for Linux.
-
-My [live-loudness-normalizer](https://github.com/m13253/sb-jsfx-plugins) plugin
-can also help you manage your stream loudness in realtime.
-
 ## License
 
 This program is free software: you can redistribute it and/or modify it under
@@ -124,6 +99,8 @@ along with this program.
 
 ## Acknowledgment
 
-This program is inspired by (but not a fork from)
-[discord-audio-pipe](https://github.com/QiCuiHub/discord-audio-pipe).
-Thank you QiCuiHub!
+This project is forked from m13243's discord-mic-bot. I used this
+repo to share stream audio for a while before editing it to better
+suit my specific purpose for it. Thank you m13243 this bot has been
+exceedingly useful.
+[discord-mic-bot](https://github.com/m13253/discord-mic-bot).

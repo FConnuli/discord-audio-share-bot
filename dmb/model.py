@@ -47,10 +47,10 @@ class SoundDevice:
 
 
 class Model:
-    __slots__ = ['v', 'loop', 'running', 'logger', 'discord_bot_token', 'discord_client', 'login_status', 'current_viewing_guild', 'input_stream', 'audio_warning_count', 'audio_queue', 'muted', 'opus_encoder', 'opus_encoder_private', 'opus_encoder_executor', 'lu_meter']
+    __slots__ = ['v', 'loop', 'running', 'logger', 'discord_bot_token', 'discord_client', 'login_status', 'current_viewing_guild', 'input_stream', 'audio_warning_count', 'audio_queue', 'muted', 'opus_encoder', 'opus_encoder_private', 'opus_encoder_executor', 'lu_meter', 'user_id']
     muted_frame = array.array('f', [0.0] * (48000 * 20 // 1000 * 2))
 
-    def __init__(self, discord_bot_token: str, loop: asyncio.AbstractEventLoop) -> None:
+    def __init__(self, discord_bot_token: str, user: int, loop: asyncio.AbstractEventLoop) -> None:
         self.v: typing.Optional['view.View'] = None
         self.loop = loop
         self.running = True
@@ -60,6 +60,8 @@ class Model:
         logging_handler = logging.StreamHandler()
         logging_handler.setFormatter(logging.Formatter('%(asctime)s [%(levelname)s] %(message)s', '%Y-%m-%d %H:%M:%S'))
         self.logger.addHandler(logging_handler)
+
+        self.user_id = user
 
         self.discord_bot_token = discord_bot_token
         intents = discord.Intents(guilds=True, voice_states=True)
@@ -79,13 +81,14 @@ class Model:
         self.opus_encoder_private = getattr(discord.opus, '_lib')
         self.opus_encoder_private.opus_encoder_ctl(getattr(self.opus_encoder, '_state'), discord.opus.CTL_SET_BITRATE, 128000)
         # FEC only works for voice, not music, and from my experience it hurts music quality severely.
-        self.opus_encoder.set_fec(True)
-        self.opus_encoder.set_expected_packet_loss_percent(0.15)
+        self.opus_encoder.set_fec(False)
+        self.opus_encoder.set_expected_packet_loss_percent(0.0)
         self.opus_encoder_executor = concurrent.futures.ThreadPoolExecutor(1)
 
         self.lu_meter = lumeter.LUMeter(self.loop)
 
         self._set_up_events()
+
 
     def _set_up_events(self) -> None:
         async def on_connect() -> None:
@@ -112,6 +115,23 @@ class Model:
             username = typing.cast(str, user.name) if user is not None else ''
             self.login_status = 'Logged in as: {}'.format(username)
             self.logger.info(self.login_status)
+            self.start_inputstream()
+            channel_to_join = None
+            server_list = self.list_guilds()
+            for server in server_list:
+                print(server)
+                for channel in server.voice_channels:
+                    print("  " + str(channel))
+                    for occupants in channel.members:
+                        print("    " + str(occupants.id))
+                        print("    " + str(self.user_id))
+                        if occupants.id == self.user_id:
+                            channel_to_join = channel
+            if channel_to_join == None:
+                print("no channel to join")
+            else:
+                pass
+                #asyncio.run_coroutine_threadsafe(self.join_voice(channel_to_join), self.loop)
             if self.v is not None:
                 self.v.loop.call_soon_threadsafe(self.v.login_status_updated)
                 self.v.loop.call_soon_threadsafe(self.v.guilds_updated)
@@ -184,6 +204,19 @@ class Model:
         self.discord_client.event(on_guild_update)
 
         async def on_voice_state_update(member: discord.Member, before: discord.VoiceState, after: discord.VoiceState) -> None:
+            if member.id == self.user_id and (
+                ((not before.self_video) and after.self_video) or
+                ((not before.self_stream) and after.self_stream)):
+                self.logger.info('stream started')
+                asyncio.run_coroutine_threadsafe(self.join_voice(after.channel), self.loop)
+                #self.join_voice(after.channel)
+            elif member.id == self.user_id and (
+                (before.self_video and (not after.self_video)) or
+                (before.self_stream and (not after.self_stream)) or
+                after.):
+                self.logger.info('stream ended')
+                asyncio.run_coroutine_threadsafe(self.leave_voice(before.channel), self.loop)
+                #self.leave_voice(before.channel)
             if self.v is not None:
                 self.v.loop.call_soon_threadsafe(self.v.joined_updated)
 
@@ -278,6 +311,25 @@ class Model:
             return
 
         self.input_stream = sounddevice.RawInputStream(samplerate=48000, blocksize=48000 * 20 // 1000, device=device_id, channels=2, dtype='float32', latency='low', callback=self._recording_callback, clip_off=True, dither_off=True, never_drop_input=False)
+        try:
+            self.input_stream.start()
+        except Exception:
+            traceback.print_exc()
+            self.input_stream.close()
+            self.input_stream = None
+
+    def start_inputstream(self) -> None:
+        if self.input_stream is not None:
+            self.input_stream.stop()
+            self.input_stream.close()
+            self.input_stream = None
+
+        #defaultapi = self.list_sound_hostapis()[0]
+        #defaultdevice = self.list_sound_input_devices(defaultapi)[0]
+
+        #self.start_recording("ALSA", "default")
+
+        self.input_stream = sounddevice.RawInputStream(samplerate=48000, blocksize=48000 * 20 // 1000, device=None, channels=2, dtype='float32', latency='low', callback=self._recording_callback, clip_off=True, dither_off=True, never_drop_input=False)
         try:
             self.input_stream.start()
         except Exception:
