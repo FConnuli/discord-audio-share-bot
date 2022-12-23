@@ -1,4 +1,4 @@
-# discord-mic-bot
+# discord-audio-share-bot
 
 Discord bot to connect to any audio source on your linux system.
 
