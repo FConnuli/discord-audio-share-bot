@@ -212,8 +212,7 @@ class Model:
                 #self.join_voice(after.channel)
             elif member.id == self.user_id and (
                 (before.self_video and (not after.self_video)) or
-                (before.self_stream and (not after.self_stream)) or
-                after.):
+                (before.self_stream and (not after.self_stream))):
                 self.logger.info('stream ended')
                 asyncio.run_coroutine_threadsafe(self.leave_voice(before.channel), self.loop)
                 #self.leave_voice(before.channel)
